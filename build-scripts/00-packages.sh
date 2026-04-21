@@ -35,7 +35,9 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
       libvdpau-dev \
       linux-headers \
       make \
+      meson \
       nasm \
+      ninja-build \
       patch \
       perl \
       pkgconfig \
@@ -54,7 +56,9 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
       libffmpeg-nvenc-dev \
       libva-dev \
       make \
+      meson \
       nasm \
+      ninja-build \
       npm \
       pkg-config \
       wget \
@@ -67,7 +71,9 @@ elif [[ "$RUNNER_OS" == "macOS" ]]; then
   # Use homebrew to install missing packages on mac.
   brew install \
     md5sha1sum \
+    meson \
     nasm \
+    ninja \
     yasm
 
   # Downgrade to CMake v3 specifically.  x265 blows up on CMake v4.
@@ -89,6 +95,7 @@ elif [[ "$RUNNER_OS" == "macOS" ]]; then
   # Ignore errors if one of these is not installed.
   for i in \
     aom \
+    dav1d \
     lame \
     libvpx \
     libx11 \
@@ -128,6 +135,8 @@ elif [[ "$RUNNER_OS" == "Windows" ]]; then
     git \
     make \
     mingw-w64-x86_64-gcc \
+    mingw-w64-x86_64-meson \
+    mingw-w64-x86_64-ninja \
     nasm \
     patch \
     pkg-config \
