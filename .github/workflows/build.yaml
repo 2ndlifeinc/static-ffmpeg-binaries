@@ -25,6 +25,11 @@ on:
       ref:
         required: true
         type: string
+      version:
+        description: "Release version label used in MinIO path (releases/ffmpeg/<version>/unsigned/*). Falls back to ref_name (tag) or dev-<sha7>."
+        required: false
+        type: string
+        default: ""
       # If true, start a debug SSH server on failures.
       debug:
         required: false
@@ -39,6 +44,11 @@ on:
   # Runs on manual trigger.
   workflow_dispatch:
     inputs:
+      version:
+        description: "Release version label used in MinIO path (releases/ffmpeg/<version>/unsigned/*). Falls back to ref_name (tag) or dev-<sha7>."
+        required: false
+        type: string
+        default: ""
       # If true, start a debug SSH server on failures.
       debug:
         required: false
@@ -251,16 +261,64 @@ jobs:
           wc -c *
           md5sum *
 
-      # This makes it possible to debug failures in the next step by
-      # downloading binaries that fail the check for static linkage.
-      - name: Upload assets as artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: binaries${{ env.SUFFIX }}
-          path: assets/*
-
       - name: Check that executables are static
         run: ./repo-src/build-scripts/99-check-static.sh
+
+      - name: Install mc (MinIO client)
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -e
+          set -x
+          if command -v mc >/dev/null 2>&1; then
+            mc --version
+            exit 0
+          fi
+          OS_TOKEN=""
+          BIN_NAME="mc"
+          case "${{ runner.os }}" in
+            macOS)   OS_TOKEN="darwin" ;;
+            Linux)   OS_TOKEN="linux" ;;
+            Windows) OS_TOKEN="windows"; BIN_NAME="mc.exe" ;;
+            *) echo "unsupported runner os"; exit 1 ;;
+          esac
+          MC_ARCH="amd64"
+          if [[ "${{ matrix.target_arch }}" == "arm64" && "$OS_TOKEN" != "windows" ]]; then
+            MC_ARCH="arm64"
+          fi
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL "https://dl.min.io/client/mc/release/${OS_TOKEN}-${MC_ARCH}/${BIN_NAME}" \
+            -o "$HOME/.local/bin/${BIN_NAME}"
+          chmod +x "$HOME/.local/bin/${BIN_NAME}" || true
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/${BIN_NAME}" --version
+
+      - name: Upload unsigned binaries to MinIO
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          S3_ENDPOINT_URL: ${{ vars.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -e
+          set -x
+          VERSION="$INPUT_VERSION"
+          if [[ -z "$VERSION" ]]; then
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+              VERSION="$GITHUB_REF_NAME"
+            else
+              VERSION="dev-${GITHUB_SHA::7}"
+            fi
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mc alias set minio "$S3_ENDPOINT_URL" "$S3_ACCESS_KEY" "$S3_SECRET_KEY"
+          DEST="minio/releases/ffmpeg/$VERSION/unsigned"
+          for f in assets/ffmpeg* assets/ffprobe*; do
+            [[ -f "$f" ]] || continue
+            name=$(basename "$f")
+            mc cp "$f" "$DEST/$name"
+          done
+          mc ls "$DEST/"
 
       # Because we had to break Alpine detection to work around runner
       # restrictions, we also have to manually install Alpine deps for tmate.

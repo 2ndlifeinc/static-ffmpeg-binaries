@@ -1,95 +1,42 @@
-# Copyright 2021 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# A workflow to build and release fresh binaries.
 name: Release
 
-# Runs when a new tag is created.  Creates a release for that tag, then builds
-# ffmpeg and ffprobe on all OS & CPU combinations, then attaches them to the
-# release.
+# Runs on a new tag. Builds all platforms (including win-arm64 cross) and
+# deposits UNSIGNED binaries into MinIO at releases/ffmpeg/<tag>/unsigned/.
+# Signing and signed-binary publishing is handled by a separate workflow in
+# the youtuboost_desktop repo (ffmpeg-sign-publish.yml) that pulls from
+# MinIO and pushes signed binaries back to releases/ffmpeg/<tag>/signed/.
 on:
   push:
     tags:
       - "*"
-
-# NOTE: Set the repository variable ENABLE_DEBUG to enable debugging via tmate on
-# failure.
-# NOTE: Set the repository variable ENABLE_SELF_HOSTED to enable self-hosted
-# runners such as linux-arm64.  This is set on the official repo, but forks
-# will have to opt in after setting up their own self-hosted runners.
 
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
     with:
       ref: ${{ github.ref }}
+      version: ${{ github.ref_name }}
+    secrets: inherit
 
-  publish_release:
-    name: Publish release
-    needs: [build]
+  build_winarm64:
+    uses: ./.github/workflows/build-winarm64.yaml
+    with:
+      ref: ${{ github.ref }}
+      version: ${{ github.ref_name }}
+    secrets: inherit
+
+  summary:
+    name: Release summary
+    needs: [build, build_winarm64]
     runs-on: ubuntu-latest
-    permissions:
-      # "Write" to contents is necessary to create a release.
-      contents: write
     steps:
-      - uses: actions/checkout@v6
-        with:
-          path: repo-src
-          ref: ${{ github.ref }}
-          persist-credentials: false
-
-      - uses: actions/download-artifact@v8
-        with:
-          path: assets
-          pattern: binaries-*
-          merge-multiple: true
-
-      - name: Publish release
+      - name: Record unsigned upload location
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
         run: |
           set -e
-          set -x
-
-          # Compile the release notes (the "body" of the release) with the date
-          # and the versions of the software we built.
-
-          # The format provided by "date -I" is "YYYY-MM-DD".
-          echo "Date:" >> body.txt
-          echo " - $(date -I)" >> body.txt
-          echo "" >> body.txt
-
-          echo "${{ github.repository }} version:" >> body.txt
-          echo " - ${{ github.ref_name }}" >> body.txt
-          echo "" >> body.txt
-
-          echo "Software versions:" >> body.txt
-          cat repo-src/versions.txt | \
-            sed -e 's/#.*//' | \
-            grep . | \
-            sed -e 's/^/ - /' >> body.txt
-          echo "" >> body.txt
-
-          # Add the MD5 sums to the release notes.
-          echo "MD5 sums:" >> body.txt
-          (cd assets; md5sum * | sed -e 's/^/ - /') >> body.txt
-
-          # Publish the release, including release notes and assets.
-          gh release create \
-              -R ${{ github.repository }} \
-              --verify-tag \
-              --notes-file body.txt \
-              --title "${{ github.ref_name }}" \
-              "${{ github.ref_name }}" \
-              assets/*
+          echo "### Unsigned binaries uploaded" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "MinIO path: \`releases/ffmpeg/$VERSION/unsigned/\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Next step: run \`ffmpeg-sign-publish\` workflow in 2ndlifeinc/youtuboost_desktop with version=\`$VERSION\`." >> "$GITHUB_STEP_SUMMARY"

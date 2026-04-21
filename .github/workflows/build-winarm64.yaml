@@ -6,7 +6,18 @@ on:
       ref:
         required: true
         type: string
+      version:
+        description: "Release version label used in MinIO path (releases/ffmpeg/<version>/unsigned/*). Falls back to ref_name (tag) or dev-<sha7>."
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version label used in MinIO path (releases/ffmpeg/<version>/unsigned/*). Falls back to ref_name (tag) or dev-<sha7>."
+        required: false
+        type: string
+        default: ""
 
 defaults:
   run:
@@ -42,9 +53,34 @@ jobs:
       - name: Report versions
         run: ls -la out && file out/*.exe || true
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: winarm64-binaries
-          path: out/*.exe
-          if-no-files-found: error
+      - name: Install mc (MinIO client)
+        run: |
+          set -ex
+          mkdir -p "$HOME/.local/bin"
+          curl -sSL "https://dl.min.io/client/mc/release/linux-amd64/mc" \
+            -o "$HOME/.local/bin/mc"
+          chmod +x "$HOME/.local/bin/mc"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/mc" --version
+
+      - name: Upload unsigned binaries to MinIO
+        env:
+          S3_ENDPOINT_URL: ${{ vars.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -ex
+          VERSION="$INPUT_VERSION"
+          if [[ -z "$VERSION" ]]; then
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+              VERSION="$GITHUB_REF_NAME"
+            else
+              VERSION="dev-${GITHUB_SHA::7}"
+            fi
+          fi
+          mc alias set minio "$S3_ENDPOINT_URL" "$S3_ACCESS_KEY" "$S3_SECRET_KEY"
+          DEST="minio/releases/ffmpeg/$VERSION/unsigned"
+          mc cp "out/ffmpeg-win-arm64.exe"  "$DEST/ffmpeg-win-arm64.exe"
+          mc cp "out/ffprobe-win-arm64.exe" "$DEST/ffprobe-win-arm64.exe"
+          mc ls "$DEST/"
