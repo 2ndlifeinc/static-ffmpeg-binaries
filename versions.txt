@@ -2,7 +2,7 @@ ffmpeg: n8.0.1
 libvpx: v1.16.0
 svt-av1: v3.1.2
 dav1d: 1.5.1
-aom: v3.14.1
+aom: v3.13.3
 x264: b35605ac
 x265: 4.1
 lame: 3.100
