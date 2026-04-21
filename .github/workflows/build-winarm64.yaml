@@ -48,7 +48,7 @@ jobs:
         env:
           REPO_SRC: ${{ github.workspace }}/repo-src
           OUT_DIR: ${{ github.workspace }}/out
-        run: bash "$REPO_SRC/build-scripts/cross-winarm64.sh"
+        run: bash "$REPO_SRC/cross-scripts/winarm64.sh"
 
       - name: Report versions
         run: ls -la out && file out/*.exe || true
@@ -70,7 +70,7 @@ jobs:
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          set -ex
+          set -e
           VERSION="$INPUT_VERSION"
           if [[ -z "$VERSION" ]]; then
             if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
@@ -79,7 +79,7 @@ jobs:
               VERSION="dev-${GITHUB_SHA::7}"
             fi
           fi
-          mc alias set minio "$S3_ENDPOINT_URL" "$S3_ACCESS_KEY" "$S3_SECRET_KEY"
+          export MC_HOST_minio="${S3_ENDPOINT_URL/https:\/\//https://$S3_ACCESS_KEY:$S3_SECRET_KEY@}"
           DEST="minio/releases/ffmpeg/$VERSION/unsigned"
           mc cp "out/ffmpeg-win-arm64.exe"  "$DEST/ffmpeg-win-arm64.exe"
           mc cp "out/ffprobe-win-arm64.exe" "$DEST/ffprobe-win-arm64.exe"
