@@ -1,8 +1,0 @@
-{
-  "active": true,
-  "started_at": "2026-04-21T09:10:00.522Z",
-  "original_prompt": "/ralph 123 끝까지 진행해 \n최종 signed ffmpeg 결과물이 minio release bucket 의 적절한 위치에 올라갈때까지 진행해야해\npr 을 열면 pr lifecycle skill 을 진행해야하고\nmerge 를 하면 post merge 검증을 진행해야해 (배포)\n직접 배포는 금지야. 모든 배포는 ci 에서 일어나도록 디자인해야해\ncode sign 하기 전 binary 와 한 후의 binary 를 둘다 minio release bucket 에 올려서 주고받아\ngithub ci artifacts 는 사용하지마\n\n최종적으로 youtuboost_desktop 이 가져가서 사용할수잇는 signed binary 가 나올때까지 작업이 진행되어야해",
-  "session_id": "e7992fe7-7ca8-4f2b-88ad-4fc957c4de60",
-  "reinforcement_count": 50,
-  "last_checked_at": "2026-04-21T09:19:34.624Z"
-}

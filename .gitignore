@@ -10,3 +10,4 @@
 
 # A local build folder
 build
+.omc/
