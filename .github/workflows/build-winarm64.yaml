@@ -1,0 +1,50 @@
+name: Build win-arm64 (cross)
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-winarm64:
+    runs-on: [self-hosted, Linux, X64]
+    container:
+      image: mstorsjo/llvm-mingw:latest
+      options: --user root
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: repo-src
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+
+      - name: Install build prerequisites
+        run: |
+          set -ex
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf automake build-essential ca-certificates cmake curl git \
+            libtool make meson ninja-build nasm pkg-config python3-pip yasm
+
+      - name: Cross-build ffmpeg + deps for win-arm64
+        env:
+          REPO_SRC: ${{ github.workspace }}/repo-src
+          OUT_DIR: ${{ github.workspace }}/out
+        run: bash "$REPO_SRC/build-scripts/cross-winarm64.sh"
+
+      - name: Report versions
+        run: ls -la out && file out/*.exe || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: winarm64-binaries
+          path: out/*.exe
+          if-no-files-found: error

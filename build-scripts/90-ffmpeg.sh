@@ -78,6 +78,8 @@ if ! ./configure \
     --disable-ffplay \
     --enable-libvpx \
     --enable-libsvtav1 \
+    --enable-libdav1d \
+    --enable-libaom \
     --enable-libx264 \
     --enable-libx265 \
     --enable-libmp3lame \
