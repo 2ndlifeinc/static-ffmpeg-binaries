@@ -241,6 +241,12 @@ jobs:
       - name: Install mbedtls
         run: ./repo-src/build-scripts/07-mbedtls.sh
 
+      - name: Install dav1d
+        run: ./repo-src/build-scripts/08-dav1d.sh
+
+      - name: Install libaom
+        run: ./repo-src/build-scripts/09-libaom.sh
+
       - name: Build ffmpeg and ffprobe
         run: ./repo-src/build-scripts/90-ffmpeg.sh
 
