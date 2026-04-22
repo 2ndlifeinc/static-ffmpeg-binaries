@@ -6,15 +6,25 @@ on:
       ref:
         required: true
         type: string
-      version:
-        description: "Release version label used in MinIO path (releases/ffmpeg/<version>/unsigned/*). Falls back to ref_name (tag) or dev-<sha7>."
+      base_version:
+        description: "ffmpeg upstream semver, e.g. 8.0.1. Used as first MinIO path segment."
+        required: false
+        type: string
+        default: "8.0.1"
+      variant:
+        description: "Codec/date variant slug, e.g. 20260422-libdav1d-libaom. Full MinIO path: releases/ffmpeg/<base_version>/<variant>/unsigned/*. Falls back to ref_name (tag) or dev-<YYYYMMDD>-<sha7>."
         required: false
         type: string
         default: ""
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release version label used in MinIO path (releases/ffmpeg/<version>/unsigned/*). Falls back to ref_name (tag) or dev-<sha7>."
+      base_version:
+        description: "ffmpeg upstream semver, e.g. 8.0.1. Used as first MinIO path segment."
+        required: false
+        type: string
+        default: "8.0.1"
+      variant:
+        description: "Codec/date variant slug, e.g. 20260422-libdav1d-libaom. Full MinIO path: releases/ffmpeg/<base_version>/<variant>/unsigned/*. Falls back to ref_name (tag) or dev-<YYYYMMDD>-<sha7>."
         required: false
         type: string
         default: ""
@@ -68,21 +78,21 @@ jobs:
           S3_ENDPOINT_URL: ${{ vars.S3_ENDPOINT_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BASE_VERSION: ${{ inputs.base_version }}
+          INPUT_VARIANT: ${{ inputs.variant }}
         run: |
           set -e
-          VERSION="$INPUT_VERSION"
-          if [[ -z "$VERSION" ]]; then
+          BASE_VERSION="${INPUT_BASE_VERSION:-8.0.1}"
+          VARIANT="$INPUT_VARIANT"
+          if [[ -z "$VARIANT" ]]; then
             if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-              VERSION="$GITHUB_REF_NAME"
+              VARIANT="$GITHUB_REF_NAME"
             else
-              VERSION="dev-${GITHUB_SHA::7}"
+              VARIANT="dev-$(date +%Y%m%d)-${GITHUB_SHA::7}"
             fi
           fi
-          SCHEME="${S3_ENDPOINT_URL%%://*}"
-          HOST="${S3_ENDPOINT_URL#*://}"
-          export MC_HOST_minio="${SCHEME}://${S3_ACCESS_KEY}:${S3_SECRET_KEY}@${HOST}"
-          DEST="minio/releases/ffmpeg/$VERSION/unsigned"
+          mc alias set ci "$S3_ENDPOINT_URL" "$S3_ACCESS_KEY" "$S3_SECRET_KEY"
+          DEST="ci/releases/ffmpeg/$BASE_VERSION/$VARIANT/unsigned"
           [[ -f out/ffmpeg-win-arm64.exe ]] || { echo "::error::ffmpeg-win-arm64.exe missing"; exit 1; }
           [[ -f out/ffprobe-win-arm64.exe ]] || { echo "::error::ffprobe-win-arm64.exe missing"; exit 1; }
           mc cp "out/ffmpeg-win-arm64.exe"  "$DEST/ffmpeg-win-arm64.exe"
