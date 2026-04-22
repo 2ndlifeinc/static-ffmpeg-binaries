@@ -1,28 +1,47 @@
 name: Release
 
 # Runs on a new tag. Builds all platforms (including win-arm64 cross) and
-# deposits UNSIGNED binaries into MinIO at releases/ffmpeg/<tag>/unsigned/.
+# deposits UNSIGNED binaries into MinIO at
+#   releases/ffmpeg/<base_version>/<variant>/unsigned/
 # Signing and signed-binary publishing is handled by a separate workflow in
 # the youtuboost_desktop repo (ffmpeg-sign-publish.yml) that pulls from
-# MinIO and pushes signed binaries back to releases/ffmpeg/<tag>/signed/.
+# MinIO and pushes signed binaries back to
+#   releases/ffmpeg/<base_version>/<variant>/signed/<os>/<arch>/
+#
+# Tag naming convention: <YYYYMMDD>-<codec-list>   e.g. 20260422-libdav1d-libaom
+# base_version (ffmpeg upstream semver) stays 8.0.1 until the pinned
+# ffmpeg version in versions.txt is bumped.
 on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+    inputs:
+      base_version:
+        description: "ffmpeg upstream semver"
+        required: false
+        type: string
+        default: "8.0.1"
+      variant:
+        description: "Variant slug (date + codec list)"
+        required: true
+        type: string
 
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
     with:
       ref: ${{ github.ref }}
-      version: ${{ github.ref_name }}
+      base_version: ${{ inputs.base_version || '8.0.1' }}
+      variant: ${{ inputs.variant || github.ref_name }}
     secrets: inherit
 
   build_winarm64:
     uses: ./.github/workflows/build-winarm64.yaml
     with:
       ref: ${{ github.ref }}
-      version: ${{ github.ref_name }}
+      base_version: ${{ inputs.base_version || '8.0.1' }}
+      variant: ${{ inputs.variant || github.ref_name }}
     secrets: inherit
 
   summary:
@@ -32,11 +51,12 @@ jobs:
     steps:
       - name: Record unsigned upload location
         env:
-          VERSION: ${{ github.ref_name }}
+          BASE_VERSION: ${{ inputs.base_version || '8.0.1' }}
+          VARIANT: ${{ inputs.variant || github.ref_name }}
         run: |
           set -e
           echo "### Unsigned binaries uploaded" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "MinIO path: \`releases/ffmpeg/$VERSION/unsigned/\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "MinIO path: \`releases/ffmpeg/${BASE_VERSION}/${VARIANT}/unsigned/\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Next step: run \`ffmpeg-sign-publish\` workflow in 2ndlifeinc/youtuboost_desktop with version=\`$VERSION\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "Next step: run \`ffmpeg-sign-publish\` workflow in 2ndlifeinc/youtuboost_desktop with base_version=\`${BASE_VERSION}\` variant=\`${VARIANT}\`." >> "$GITHUB_STEP_SUMMARY"
