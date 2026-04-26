@@ -34,6 +34,8 @@ jobs:
         with:
           dry_run: ${{ github.event.inputs.dry_run || false }}
           prune: true
-          manifest: sync-labels/configs/${{ github.repository }}.yaml
+          # This repo does not have a repo-specific manifest in shaka-github-tools.
+          # Use the shared common label set until an upstream 2ndlifeinc config exists.
+          manifest: sync-labels/configs/common/common.yaml
           repository: ${{ github.repository }}
           token: ${{ github.token }}
