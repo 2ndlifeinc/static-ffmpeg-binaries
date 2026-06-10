@@ -86,7 +86,7 @@ jobs:
   # build matrix contents can't be changed by conditionals, but it can be
   # computed by another job and deserialized.
   matrix_config:
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted, macos-or-linux]
     outputs:
       MATRIX: ${{ steps.configure.outputs.MATRIX }}
     steps:

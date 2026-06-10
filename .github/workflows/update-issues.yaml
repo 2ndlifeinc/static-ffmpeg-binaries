@@ -10,7 +10,7 @@ on:
 
 jobs:
   update-issues:
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted, macos-or-linux]
 
     permissions:
       # "Write" to Issues to add labels, milestones, comments, etc.

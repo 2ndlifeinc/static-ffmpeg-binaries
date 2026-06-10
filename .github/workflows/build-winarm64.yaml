@@ -35,7 +35,7 @@ defaults:
 
 jobs:
   build-winarm64:
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted, macos-or-linux]
     container:
       image: mstorsjo/llvm-mingw:latest
       options: --user root

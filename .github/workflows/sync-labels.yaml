@@ -15,7 +15,7 @@ on:
 
 jobs:
   sync-labels:
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted, macos-or-linux]
 
     permissions:
       # "Write" to Issues to manage labels for the repo
