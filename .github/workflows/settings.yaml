@@ -30,7 +30,7 @@ on:
 
 jobs:
   settings:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     outputs:
       self_hosted: ${{ steps.settings.outputs.self_hosted }}
       debug: ${{ steps.settings.outputs.debug }}
