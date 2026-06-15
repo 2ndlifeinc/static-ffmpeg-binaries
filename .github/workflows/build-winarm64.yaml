@@ -35,7 +35,8 @@ defaults:
 
 jobs:
   build-winarm64:
-    runs-on: [self-hosted, macos-or-linux]
+    # May 2026 state: this special cross-build stays on self-hosted Linux x64; do not normalize it to macos-or-linux or GitHub-hosted runners without revalidating the container/toolchain.
+    runs-on: [self-hosted, Linux, X64]
     container:
       image: mstorsjo/llvm-mingw:latest
       options: --user root

@@ -30,7 +30,8 @@ on:
 
 jobs:
   settings:
-    runs-on: [self-hosted, macos-or-linux]
+    # May 2026 state: keep this standard GitHub-hosted runner; the repo is public so standard GitHub-hosted usage is free. Do not convert to self-hosted without a billing/visibility decision.
+    runs-on: ubuntu-latest
     outputs:
       self_hosted: ${{ steps.settings.outputs.self_hosted }}
       debug: ${{ steps.settings.outputs.debug }}
