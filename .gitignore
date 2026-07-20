@@ -11,3 +11,7 @@
 # A local build folder
 build
 .omc/
+
+# Pi project-local package artifacts
+.pi/npm/
+.pi/git/
